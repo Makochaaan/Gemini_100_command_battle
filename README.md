@@ -1,0 +1,2 @@
+# Gemini_100_command_battle
+Gemini CLI実践イベントで作成したコマンドバトルゲームです。
