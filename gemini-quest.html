@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Quest</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        :root {
+            --bg-color: #0a0a1a;
+            --text-color: #f0f0f0;
+            --border-color: #4a4e69;
+            --accent-color: #fca311;
+            --hp-color: #33ff33;
+            --hp-bg-color: #ff3333;
+            --window-bg: #16213e;
+        }
+
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+
+        .game-wrapper {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        #game-container {
+            width: 800px;
+            height: 600px;
+            background-color: black;
+            border: 4px solid var(--border-color);
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        #win-points-display {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            font-size: 1rem;
+            color: var(--accent-color);
+            z-index: 5;
+        }
+
+        .window {
+            border: 3px solid var(--border-color);
+            background-color: var(--window-bg);
+            padding: 15px;
+            box-sizing: border-box;
+        }
+
+        #status-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .status-box {
+            width: 48%;
+        }
+
+        .status-box h2 {
+            margin: 0 0 10px;
+            font-size: 1rem;
+        }
+
+        .hp-bar-container {
+            width: 100%;
+            height: 20px;
+            background-color: var(--hp-bg-color);
+            border: 2px solid var(--border-color);
+        }
+
+        .hp-bar {
+            width: 100%;
+            height: 100%;
+            background-color: var(--hp-color);
+            transition: width 0.5s ease-out;
+        }
+        
+        .hp-text {
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        #screen-container {
+            flex-grow: 1;
+            margin-bottom: 10px;
+        }
+
+        #enemy-area {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 5rem;
+            line-height: 1;
+            color: var(--accent-color);
+        }
+
+        #bottom-panel {
+            height: 180px;
+            display: flex;
+            gap: 10px;
+        }
+
+        #message-log {
+            flex-grow: 1;
+            font-size: 1.2rem;
+            padding: 20px;
+        }
+
+        #command-container {
+            width: 300px;
+            display: flex;
+            overflow-y: auto;
+        }
+
+        #main-commands, #magic-commands, #skill-commands {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 1.5rem;
+            width: 100%;
+        }
+
+        #main-commands li, #magic-commands li, #skill-commands li {
+            padding: 5px 20px;
+            position: relative;
+        }
+
+        .selected::before {
+            content: '▶';
+            position: absolute;
+            left: -10px;
+            top: 5px;
+            color: var(--accent-color);
+        }
+
+        .game-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5em;
+            visibility: hidden;
+            z-index: 10;
+            border-radius: 5px;
+        }
+
+        .game-overlay button {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.5em;
+            margin-top: 20px;
+            padding: 10px 20px;
+            border: 2px solid var(--accent-color);
+            background-color: var(--window-bg);
+            color: var(--accent-color);
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .game-overlay button:hover {
+            background-color: var(--accent-color);
+            color: var(--window-bg);
+        }
+
+        .instructions {
+            width: 250px;
+            text-align: left;
+            background-color: var(--window-bg);
+            border: 2px solid var(--border-color);
+            padding: 15px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            line-height: 1.8;
+        }
+        .instructions h2 {
+             margin: 0 0 10px 0;
+            font-size: 1.1rem;
+            color: var(--accent-color);
+            border-bottom: 1px solid #4a4e69;
+            padding-bottom: 5px;
+        }
+        .instructions ul {
+            padding-left: 0;
+            list-style: none;
+            margin: 0;
+        }
+        .instructions li {
+            margin-bottom: 5px;
+        }
+        .instructions span {
+            color: var(--accent-color);
+            display: inline-block;
+            width: 80px;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="game-wrapper">
+        <div id="game-container">
+            <div id="win-points-display">WINS: 0</div>
+            <!-- Status -->
+            <div id="status-container" class="window">
+                <div class="status-box">
+                    <h2>PLAYER</h2>
+                    <div class="hp-bar-container">
+                        <div id="player-hp-bar" class="hp-bar"></div>
+                    </div>
+                    <p id="player-hp-text" class="hp-text">HP: 100 / 100</p>
+                </div>
+                <div class="status-box">
+                    <h2>ENEMY</h2>
+                    <div class="hp-bar-container">
+                        <div id="enemy-hp-bar" class="hp-bar"></div>
+                    </div>
+                    <p id="enemy-hp-text" class="hp-text">HP: 150 / 150</p>
+                </div>
+            </div>
+
+            <!-- Screen -->
+            <div id="screen-container" class="window">
+                <div id="enemy-area">
+                    <pre id="enemy-sprite">
+　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
+　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
+　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
+　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
+　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
+　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
+　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
+　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
+　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
+texx</pre>
+                </div>
+            </div>
+
+            <!-- Bottom Panel -->
+            <div id="bottom-panel">
+                <div id="message-log" class="window"></div>
+                <div id="command-container" class="window">
+                    <ul id="main-commands">
+                        <li data-command="attack">こうげき</li>
+                        <li data-command="magic">まほう</li>
+                        <li data-command="skill">とくぎ</li>
+                        <li data-command="defend">ぼうぎょ</li>
+                        <li data-command="flee">にげる</li>
+                    </ul>
+                    <ul id="magic-commands" style="display: none;">
+                        <li data-spell="hara">ハラ</li>
+                        <li data-spell="harami">ハラミ</li>
+                        <li data-spell="harazoma">ハラゾーマ</li>
+                        <li data-spell="kyado">キャド</li>
+                        <li data-spell="makyado">マキャド</li>
+                        <li data-spell="back">もどる</li>
+                    </ul>
+                    <ul id="skill-commands" style="display: none;">
+                        <li data-skill="meditate">めいそう</li>
+                        <li data-skill="roar">ほえる</li>
+                        <li data-skill="back">もどる</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Overlays -->
+            <div id="pause-screen" class="game-overlay">PAUSED</div>
+            <div id="end-screen" class="game-overlay">
+                <div id="end-message"></div>
+                <button id="restart-button">もういちど</button>
+            </div>
+        </div>
+        <div class="instructions">
+            <h2>Controls</h2>
+            <ul>
+                <li><span>Up/Down</span>&uarr;&darr; Select</li>
+                <li><span>Enter</span>&crarr; Confirm</li>
+                <li><span>P</span>Pause</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const player = { name: 'PLAYER', hp: 0, maxHp: 0, isDefending: false };
+        const enemy = { name: 'ENEMY', hp: 0, maxHp: 0, stunTurns: 0 };
+
+        let winPoints = 0;
+
+        const GAME_STATE = {
+            PLAYER_INPUT: 'PLAYER_INPUT',
+            PLAYER_ACTION: 'PLAYER_ACTION',
+            ENEMY_ACTION: 'ENEMY_ACTION',
+            PAUSED: 'PAUSED',
+            GAME_OVER: 'GAME_OVER',
+            LOGGING: 'LOGGING',
+        };
+        let currentState = GAME_STATE.LOGGING;
+
+        const MENU_STATE = {
+            MAIN: 'MAIN',
+            MAGIC: 'MAGIC',
+            SKILL: 'SKILL',
+        };
+        let currentMenu = MENU_STATE.MAIN;
+        let selectedIndex = 0;
+
+        // DOM Elements
+        const playerHpBar = document.getElementById('player-hp-bar');
+        const playerHpText = document.getElementById('player-hp-text');
+        const enemyHpBar = document.getElementById('enemy-hp-bar');
+        const enemyHpText = document.getElementById('enemy-hp-text');
+        const enemySprite = document.getElementById('enemy-sprite');
+        const messageLog = document.getElementById('message-log');
+        const mainCommands = document.getElementById('main-commands');
+        const magicCommands = document.getElementById('magic-commands');
+        const skillCommands = document.getElementById('skill-commands');
+        const pauseScreen = document.getElementById('pause-screen');
+        const endScreen = document.getElementById('end-screen');
+        const endMessage = document.getElementById('end-message');
+        const restartButton = document.getElementById('restart-button');
+        const winPointsDisplay = document.getElementById('win-points-display');
+
+        const mainCommandItems = mainCommands.querySelectorAll('li');
+        const magicCommandItems = magicCommands.querySelectorAll('li');
+        const skillCommandItems = skillCommands.querySelectorAll('li');
+
+        const spells = {
+            hara: { name: 'ハラ', damage: [10, 20] },
+            harami: { name: 'ハラミ', damage: [20, 40] },
+            harazoma: { name: 'ハラゾーマ', damage: [40, 80] },
+            kyado: { name: 'キャド', damage: [5, 15] },
+            makyado: { name: 'マキャド', damage: [15, 35] },
+        };
+        
+        const enemyData = [
+            { name: 'スライム', hp: [80, 120], sprite: '（・∀・）' },
+            { name: 'ゴブリン', hp: [120, 180], sprite: 'ψ(｀∇´)ψ' },
+            { name: 'ドラゴン', hp: [200, 300], sprite: '༼ つ ◕_◕ ༽つ' },
+            { name: 'チョコン', hp: [150, 250], sprite: '（・ω・）' }
+        ];
+
+        function init() {
+            // Player setup
+            player.maxHp = Math.floor(Math.random() * 50) + 100; // 100-149
+            player.hp = player.maxHp;
+            player.isDefending = false;
+
+            // Enemy setup
+            const randomEnemy = enemyData[Math.floor(Math.random() * enemyData.length)];
+            enemy.name = randomEnemy.name;
+            enemy.maxHp = Math.floor(Math.random() * (randomEnemy.hp[1] - randomEnemy.hp[0])) + randomEnemy.hp[0];
+            enemy.hp = enemy.maxHp;
+            enemy.stunTurns = 0;
+            enemySprite.textContent = randomEnemy.sprite;
+
+            endScreen.style.visibility = 'hidden';
+            pauseScreen.style.visibility = 'hidden';
+            
+            updateStatus();
+            renderCommands();
+            
+            logMessage(`${enemy.name} があらわれた！`, () => {
+                currentState = GAME_STATE.PLAYER_INPUT;
+            });
+        }
+
+        function updateStatus() {
+            playerHpBar.style.width = `${(player.hp / player.maxHp) * 100}%`;
+            playerHpText.textContent = `HP: ${player.hp} / ${player.maxHp}`;
+            enemyHpBar.style.width = `${(enemy.hp / enemy.maxHp) * 100}%`;
+            enemyHpText.textContent = `HP: ${enemy.hp} / ${enemy.maxHp}`;
+        }
+
+        function renderCommands() {
+            let items;
+            if (currentMenu === MENU_STATE.MAIN) {
+                items = mainCommandItems;
+            } else if (currentMenu === MENU_STATE.MAGIC) {
+                items = magicCommandItems;
+            } else { // SKILL
+                items = skillCommandItems;
+            }
+
+            items.forEach((item, index) => {
+                if (index === selectedIndex) {
+                    item.classList.add('selected');
+                    item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                } else {
+                    item.classList.remove('selected');
+                }
+            });
+        }
+
+        function logMessage(text, callback) {
+            currentState = GAME_STATE.LOGGING;
+            messageLog.textContent = '';
+            let i = 0;
+            const interval = setInterval(() => {
+                if (i < text.length) {
+                    messageLog.textContent += text[i];
+                    i++;
+                } else {
+                    clearInterval(interval);
+                    if (callback) {
+                        setTimeout(callback, 500); // Wait a bit after message
+                    }
+                }
+            }, 50);
+        }
+
+        function handlePlayerInput(key) {
+            if (currentState !== GAME_STATE.PLAYER_INPUT) return;
+
+            let items;
+            if (currentMenu === MENU_STATE.MAIN) {
+                items = mainCommandItems;
+            } else if (currentMenu === MENU_STATE.MAGIC) {
+                items = magicCommandItems;
+            } else { // SKILL
+                items = skillCommandItems;
+            }
+
+            if (key === 'ArrowUp') {
+                selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+            } else if (key === 'ArrowDown') {
+                selectedIndex = (selectedIndex + 1) % items.length;
+            } else if (key === 'Enter') {
+                selectCommand();
+            }
+            renderCommands();
+        }
+
+        function selectCommand() {
+            currentState = GAME_STATE.PLAYER_ACTION;
+            player.isDefending = false; // Reset defense at start of new action
+
+            if (currentMenu === MENU_STATE.MAIN) {
+                const command = mainCommandItems[selectedIndex].dataset.command;
+                switch (command) {
+                    case 'attack':
+                        playerAttack();
+                        break;
+                    case 'magic':
+                        currentMenu = MENU_STATE.MAGIC;
+                        selectedIndex = 0;
+                        mainCommands.style.display = 'none';
+                        magicCommands.style.display = 'block';
+                        currentState = GAME_STATE.PLAYER_INPUT;
+                        renderCommands();
+                        break;
+                    case 'skill':
+                        currentMenu = MENU_STATE.SKILL;
+                        selectedIndex = 0;
+                        mainCommands.style.display = 'none';
+                        skillCommands.style.display = 'block';
+                        currentState = GAME_STATE.PLAYER_INPUT;
+                        renderCommands();
+                        break;
+                    case 'defend':
+                        playerDefend();
+                        break;
+                    case 'flee':
+                        playerFlee();
+                        break;
+                }
+            } else if (currentMenu === MENU_STATE.MAGIC) {
+                const spellName = magicCommandItems[selectedIndex].dataset.spell;
+                if (spellName === 'back') {
+                    currentMenu = MENU_STATE.MAIN;
+                    selectedIndex = 0;
+                    mainCommands.style.display = 'block';
+                    magicCommands.style.display = 'none';
+                    currentState = GAME_STATE.PLAYER_INPUT;
+                    renderCommands();
+                } else {
+                    playerMagic(spellName);
+                }
+            } else if (currentMenu === MENU_STATE.SKILL) {
+                const skillName = skillCommandItems[selectedIndex].dataset.skill;
+                if (skillName === 'back') {
+                    currentMenu = MENU_STATE.MAIN;
+                    selectedIndex = 0;
+                    mainCommands.style.display = 'block';
+                    skillCommands.style.display = 'none';
+                    currentState = GAME_STATE.PLAYER_INPUT;
+                    renderCommands();
+                } else if (skillName === 'meditate') {
+                    playerMeditate();
+                } else if (skillName === 'roar') {
+                    playerRoar();
+                }
+            }
+        }
+        
+        function calculateDamage(base, range) {
+            return base + Math.floor(Math.random() * range);
+        }
+
+        function playerAttack() {
+            const damage = calculateDamage(15, 10);
+            enemy.hp = Math.max(0, enemy.hp - damage);
+            updateStatus();
+            logMessage(`プレイヤー のこうげき！ ${damage} のダメージ！`, checkBattleStatus);
+        }
+
+        function playerMagic(spellName) {
+            const spell = spells[spellName];
+            const damage = calculateDamage(spell.damage[0], spell.damage[1] - spell.damage[0]);
+            enemy.hp = Math.max(0, enemy.hp - damage);
+            updateStatus();
+            logMessage(`プレイヤーは ${spell.name} をとなえた！ ${damage} のダメージ！`, checkBattleStatus);
+        }
+
+        function playerMeditate() {
+            const healAmount = Math.floor(Math.random() * 21) + 30; // Heals 30-50
+            player.hp = Math.min(player.maxHp, player.hp + healAmount);
+            updateStatus();
+            logMessage(`プレイヤーはめいそうした！ HPが ${healAmount} かいふくした！`, enemyTurn);
+        }
+
+        function playerRoar() {
+            if (Math.random() < 0.6) {
+                enemy.stunTurns = 2; // Stun for 2 turns (current and next)
+                logMessage('プレイヤーはほえた！ 相手はすくみあがった！', enemyTurn);
+            } else {
+                logMessage('しかし、なにもおこらなかった！', enemyTurn);
+            }
+        }
+
+        function playerDefend() {
+            player.isDefending = true;
+            logMessage('プレイヤーは みをまもっている！', enemyTurn);
+        }
+
+        function playerFlee() {
+            if (Math.random() < 0.5) {
+                logMessage('うまく にげきれた！', () => endGame(true));
+            } else {
+                logMessage('しかし まわりこまれてしまった！', enemyTurn);
+            }
+        }
+
+        function checkBattleStatus() {
+            if (enemy.hp <= 0) {
+                logMessage(`${enemy.name} をたおした！`, () => endGame(true));
+            } else {
+                enemyTurn();
+            }
+        }
+
+        function enemyTurn() {
+            currentState = GAME_STATE.ENEMY_ACTION;
+
+            if (enemy.stunTurns > 0) {
+                enemy.stunTurns--;
+                logMessage(`${enemy.name} はすくみあがって動けない！`, () => {
+                    currentMenu = MENU_STATE.MAIN;
+                    selectedIndex = 0;
+                    mainCommands.style.display = 'block';
+                    magicCommands.style.display = 'none';
+                    skillCommands.style.display = 'none';
+                    currentState = GAME_STATE.PLAYER_INPUT;
+                    renderCommands();
+                });
+                return;
+            }
+
+            const damage = calculateDamage(20, 15);
+            const finalDamage = player.isDefending ? Math.floor(damage / 2) : damage;
+            player.hp = Math.max(0, player.hp - finalDamage);
+            updateStatus();
+
+            let message = `${enemy.name} のこうげき！ ${finalDamage} のダメージ！`;
+            if(player.isDefending) {
+                message = `${enemy.name} のこうげき！ プレイヤーはぼうぎょしている！ ${finalDamage} のダメージ！`;
+            }
+
+            logMessage(message, () => {
+                if (player.hp <= 0) {
+                    logMessage('プレイヤーはたおれてしまった...', () => endGame(false));
+                } else {
+                    currentMenu = MENU_STATE.MAIN;
+                    selectedIndex = 0;
+                    mainCommands.style.display = 'block';
+                    magicCommands.style.display = 'none';
+                    skillCommands.style.display = 'none';
+                    currentState = GAME_STATE.PLAYER_INPUT;
+                    renderCommands();
+                }
+            });
+        }
+
+        function endGame(isVictory) {
+            currentState = GAME_STATE.GAME_OVER;
+            endScreen.style.visibility = 'visible';
+            if (isVictory) {
+                if (enemy.hp <= 0) {
+                    endMessage.textContent = 'YOU WIN!';
+                    winPoints++;
+                    winPointsDisplay.textContent = `WINS: ${winPoints}`;
+                } else {
+                    endMessage.textContent = 'ESCAPED!';
+                }
+            } else {
+                endMessage.textContent = 'GAME OVER';
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'p' || e.key === 'P') {
+                if (currentState !== GAME_STATE.GAME_OVER) {
+                    if (currentState === GAME_STATE.PAUSED) {
+                        currentState = GAME_STATE.PLAYER_INPUT; // Or whatever it was before
+                        pauseScreen.style.visibility = 'hidden';
+                    } else {
+                        currentState = GAME_STATE.PAUSED;
+                        pauseScreen.style.visibility = 'visible';
+                    }
+                }
+                return;
+            }
+            if (currentState === GAME_STATE.PLAYER_INPUT) {
+                handlePlayerInput(e.key);
+            }
+        });
+
+        restartButton.addEventListener('click', init);
+
+        init();
+    </script>
+</body>
+</html>
